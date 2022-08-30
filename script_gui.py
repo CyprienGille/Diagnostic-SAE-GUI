@@ -143,6 +143,7 @@ class testLatentSpace:
         frame = tk.LabelFrame(text=frame_title)
         if widget_type == "CheckButton":
             wid = tk.Checkbutton(master=frame, variable=var)
+            wid.select()
         elif widget_type == "Entry":
             wid = tk.Entry(master=frame, textvariable=var)
         elif widget_type == "Spinbox":
