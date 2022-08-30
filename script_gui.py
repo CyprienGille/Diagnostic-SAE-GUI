@@ -133,7 +133,9 @@ class testLatentSpace:
         self.hyparam_fields.append(wid)
 
     def get_test_file(self):
-        full_path = fd.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+        full_path = fd.askopenfilename(
+            filetypes=[("CSV Files", "*.csv")], initialdir="."
+        )
         self.file_name_test = full_path.split("/")[-1]
         self.button_run["text"] = f"Run on {self.file_name_test}"
 
