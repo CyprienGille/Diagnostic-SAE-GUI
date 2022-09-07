@@ -2698,12 +2698,12 @@ def ReadData(
             # RankFeature = RankFeature(difference,feature_name)
             M = np.mean(X, axis=0)
             X = X - M
-            if file_name2 is not None:
-                X_test = X_test - M
+            # if file_name2 is not None:
+            #     X_test = X_test - M
             if doScale:
                 X = scale(X, axis=0)  # Standardization along rows
-                if file_name2 is not None:
-                    X_test = scale(X_test, axis=0)
+                # if file_name2 is not None:
+                #     X_test = scale(X_test, axis=0)
         for index, label in enumerate(
             label_name
         ):  # convert string labels to numero (0,1,2....)
