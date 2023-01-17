@@ -2,7 +2,7 @@
 
 This is the code to reproduce the Graphical User Interface presented in:
 
-> *Effective Thyroid Nodule Determination Using a Non-Parametric Supervised Autoencoder on a Categorical Dataset.*, D'Andrea G., Gille C., Pourcher T., Barlaud M. (2022)
+> *Cost-less Thyroid Nodule Prognosis Using a Supervised Autoencoder Neural network.*, D'Andrea G., Gille C., Pourcher T., Barlaud M. (2022)
 
 Note : this GUI is only a proof-of-concept.
 
