@@ -2610,7 +2610,6 @@ def ReadData(
         feature_name(n*1): string -  name of features
         label_name(m*1): string -  name of each class
     """
-    global RankFeature
     if file_name.split(".")[-1] == "csv":
         if model == "autoencoder":
             data_pd = pd.read_csv(
@@ -2688,14 +2687,8 @@ def ReadData(
             X1 = X[np.where(Y == label_name[0])[0], :]
             X2 = X[np.where(Y == label_name[1])[0], :]
 
-            # X1_test = X_test[np.where(Y_test==label_name[0])[0],:]
-            # X2_test = X_test[np.where(Y_test==label_name[1])[0],:]
-
-            # print( np.mean(np.mean(X1, axis=0)),  np.mean(np.mean(X1_test, axis=0)),  np.mean(np.mean(X2, axis=0)), np.mean( np.mean(X2_test, axis=0)))
-
             difference = np.mean(X1, axis=0) - np.mean(X2, axis=0)
 
-            # RankFeature = RankFeature(difference,feature_name)
             M = np.mean(X, axis=0)
             X = X - M
             # if file_name2 is not None:
@@ -2720,7 +2713,6 @@ def ReadData(
         feature_name,
         label_name,
         patient_name,
-        None,
         X_test,
         Y_test,
         patient_name_test,
