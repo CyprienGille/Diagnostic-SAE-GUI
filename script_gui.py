@@ -16,7 +16,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
 # lib in '../functions/'
-import functions.functions_diagnostic_7 as ft
+import functions.functions_diagnostic as ft
 import functions.functions_network_pytorch as fnp
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -28,13 +28,12 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 
 
-file_name_train = "Th12F_meanFillTrue.csv"  # Train
-
+file_name_train = "Th12F_meanFill.csv"  # Train
 
 # ideally we would want to separate GUI elements from AE elements, TODO for later
+# TODO There is no need to train the network every time we change the test file
 # TODO make the input boxes dependant on the database (i.e. make the GUI work for LUNG too for example)
 # TODO Less code repeating during the init phase
-# TODO There is no need to train the network every run
 class testLatentSpace:
     def __init__(self):
 
@@ -263,8 +262,6 @@ class testLatentSpace:
         # Do pca for original data
         pca = PCA(n_components=2)
         pca_centre = PCA(n_components=2)
-        X_pca = X if class_len == 2 else pca.fit(X).transform(X)
-        X_tsne = X if class_len == 2 else TSNE(n_components=2).fit_transform(X)
 
         # Do pca for encoder data if cluster>2
         if data_encoder.shape[1] != 3:  # layer code_size >2  (3= 2+1 data+labels)
@@ -274,21 +271,14 @@ class testLatentSpace:
                 X_encoder_pca = pcafit.transform(data_encoder_pca)
             else:
                 X_encoder_pca = pca.fit(data_encoder_pca).transform(data_encoder_pca)
-            X_encoder_tsne = TSNE(n_components=2).fit_transform(data_encoder_pca)
             Y_encoder_pca = data_encoder[:, -1].astype(int)
         else:
             X_encoder_pca = data_encoder[:, :-1]
-            X_encoder_tsne = X_encoder_pca
             Y_encoder_pca = data_encoder[:, -1].astype(int)
         if tit == "Latent Space Test":
             color_encoder = [color[i + class_len] for i in Y_encoder_pca]
         else:
             color_encoder = [color[i] for i in Y_encoder_pca]
-
-        # Do pca for center_distance
-        labels = np.unique(Y)
-        center_distance_pca = pca_centre.fit(center_distance).transform(center_distance)
-        color_center_distance = [color[i] for i in labels]
 
         # Plot
         title2 = "Latent Space"
@@ -309,12 +299,9 @@ class testLatentSpace:
         # ------------ Parameters ---------
 
         ####### Set of parameters : #######
-        # Lung : ETA = 600 Seed = 5
-        # Brain : ETA = 300 Seed = 5
-        # Covid : ETA = 300 Seed = 5
 
         # Set seed
-        Seed = [self.SEED.get()]
+        seed = [self.SEED.get()]
         ETA = self.ETA.get()  # Control feature selection
 
         # Set device (Gpu or cpu)
@@ -329,10 +316,9 @@ class testLatentSpace:
         LR = 0.0005
         BATCH_SIZE = 8
         LOSS_LAMBDA = 0.0005  # Total loss =λ * loss_autoencoder +  loss_classification
-        bW = 1  # Kernel size for distributions
 
         #    DoTopGenes = True
-        DoTopGenes = True
+        doTopGenes = True
 
         # Scaling
         doScale = self.doScale.get()
@@ -348,8 +334,6 @@ class testLatentSpace:
         criterion_classification = nn.CrossEntropyLoss(reduction="sum")
 
         TIRO_FORMAT = True
-        #    file_name = 'LUNG.csv'
-        #    file_name = "BRAIN_MID.csv"
 
         # Choose Net
         #    net_name = 'LeNet'
@@ -363,9 +347,8 @@ class testLatentSpace:
         if not os.path.exists(outputPath):  # make the directory if it does not exist
             os.makedirs(outputPath)
 
-        # Do pca or t-SNE
-        Do_pca = True
-        Do_tSNE = True
+        # Do pca
+        doPCA = True
         run_model = "No_proj"
         # Do projection at the middle layer or not
         DO_PROJ_middle = False
@@ -396,7 +379,6 @@ class testLatentSpace:
             feature_name,
             label_name,
             patient_name,
-            LFC_Rank,
             X_test,
             Y_test,
             patient_name_test,
@@ -406,19 +388,18 @@ class testLatentSpace:
             TIRO_FORMAT=TIRO_FORMAT,
             doScale=doScale,
             doLog=doLog,
-        )  # Load files datas
-        # X_test,Y_test,feature_name,label_name, patient_name_test, LFC_Rank = ft.ReadData(file_name2, TIRO_FORMAT=TIRO_FORMAT, doScale = doScale) # Load files datas
-
-        # LFC_Rank.to_csv(outputPath+'/LFC_rank.csv')
+        )  # Load files data
 
         feature_len = len(feature_name)
         class_len = len(label_name)
         print(
-            "Number of feature: {}, Number of class: {}".format(feature_len, class_len)
+            "Number of features: {}, Number of classes: {}".format(
+                feature_len, class_len
+            )
         )
 
-        train_dl, val_dl, train_len, val_len, Yval = ft.CrossVal(
-            X, Y, patient_name, BATCH_SIZE, seed=Seed[0]
+        train_dl, val_dl, train_len, val_len, _ = ft.CrossVal(
+            X, Y, patient_name, BATCH_SIZE, seed=seed[0]
         )
 
         dtrain = ft.LoadDataset(X, Y, patient_name)
@@ -427,19 +408,18 @@ class testLatentSpace:
         )
 
         dtest = ft.LoadDataset(X_test, Y_test, patient_name_test)
-        # _, test_set = torch.utils.data.random_split(dtest, [0])
         test_dl = torch.utils.data.DataLoader(dtest, batch_size=1)
 
         train_len = len(dtrain)
         test_len = len(dtest)
 
-        accuracy_train = np.zeros((nfold * len(Seed), class_len + 1))
-        accuracy_test = np.zeros((nfold * len(Seed), class_len + 1))
-        data_train = np.zeros((nfold * len(Seed), 7))
-        data_test = np.zeros((nfold * len(Seed), 7))
+        accuracy_train = np.zeros((nfold * len(seed), class_len + 1))
+        accuracy_test = np.zeros((nfold * len(seed), class_len + 1))
+        data_train = np.zeros((nfold * len(seed), 7))
+        data_test = np.zeros((nfold * len(seed), 7))
         correct_prediction = []
         s = 0
-        for SEED in Seed:
+        for SEED in seed:
 
             np.random.seed(SEED)
             torch.manual_seed(SEED)
@@ -608,7 +588,7 @@ class testLatentSpace:
                 data_encoder_train = data_encoder_train.cpu().detach().numpy()
                 data_decoded_train = data_decoded_train.cpu().detach().numpy()
 
-                if SEED == Seed[-1]:
+                if SEED == seed[-1]:
                     if i == 0:
 
                         Ypredf = Ypred
@@ -692,7 +672,7 @@ class testLatentSpace:
                 method = "Captum_dl"  # Deeplift
                 #        method = 'Captum_gs'  # GradientShap
 
-                if DoTopGenes:
+                if doTopGenes:
                     if i == 0:
                         df_topGenes = ft.topGenes(
                             X,
@@ -736,7 +716,7 @@ class testLatentSpace:
                         sep=";",
                     )
 
-            if SEED == Seed[0]:
+            if SEED == seed[0]:
                 df_softmax = softmax
                 df_softmax.index = df_softmax["Name"]
                 # softmax.to_csv('{}softmax.csv'.format(outputPath),sep=';',index=0)
@@ -793,7 +773,7 @@ class testLatentSpace:
         )
         self.ax.clear()
         # Do pca,tSNE for encoder data
-        if Do_pca and Do_tSNE:
+        if doPCA:
             plt.figure()
             tit = "Latent Space"
             pcafit = self.ShowPcaTsne(
@@ -826,5 +806,6 @@ class testLatentSpace:
         tk.mainloop()
 
 
-tls = testLatentSpace()
-tls.show()
+if __name__ == "__main__":
+    tls = testLatentSpace()
+    tls.show()
